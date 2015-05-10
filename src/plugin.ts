@@ -7,6 +7,8 @@ export default
 class Chat {
     socketio:any;
     io:any;
+    db:any;
+    
     constructor() {
         this.register.attributes = {
             pkg: require('./../../package.json')
@@ -17,8 +19,15 @@ class Chat {
 
     register:IRegister = (server, options, next) => {
         server.bind(this);
-        this.io = this.socketio(server.listener);
-        this._register(server, options);
+
+        server.dependency('ark-database', (server, continueRegister) => {
+
+            this.db = server.plugins['ark-database'];
+            this.io = this.socketio(server.listener);
+            continueRegister();
+            next();
+            this._register(server, options);
+        });
         next();
     };
 
