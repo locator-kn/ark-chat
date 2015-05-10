@@ -9,8 +9,7 @@ class Chat {
     io:any;
     constructor() {
         this.register.attributes = {
-            name: 'ark-chat',
-            version: '0.1.0'
+            pkg: require('./../../package.json')
         };
 
         this.socketio = require('socket.io');
