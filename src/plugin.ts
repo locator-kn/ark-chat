@@ -43,17 +43,13 @@ class Chat {
 
         server.route({
             method: 'GET',
-            path: '/getRooms',
+            path: '/conversations',
             config: {
-                handler: this.getRoomsRoute
+                handler: (request, reply) => {
+                    reply({});
+                }
             }
         });
-    }
-
-    getRoomsRoute(request, reply) {
-        var userId = request.auth.credentials._id;
-
-        reply({test: 'test'});
     }
 
     errorInit(error) {
