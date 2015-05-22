@@ -43,10 +43,17 @@ class Chat {
 
         server.route({
             method: 'GET',
-            path: '/conversations',
+            path: '/my/conversations',
             config: {
                 handler: (request, reply) => {
-                    reply({});
+                    var userId = request.auth.credentials._id;
+                    this.db.getConversationsByUserId(userId, (err, conversations) => {
+                        if(!err) {
+                            return reply(conversations);
+                        }
+                        reply(err);
+                    });
+
                 }
             }
         });
