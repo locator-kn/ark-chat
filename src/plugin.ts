@@ -7,18 +7,21 @@ export default
 class Chat {
     socketio:any;
     io:any;
+    joi:any;
     db:any;
-    
+
     constructor() {
         this.register.attributes = {
             pkg: require('./../../package.json')
         };
 
         this.socketio = require('socket.io');
+        this.joi = require('joi');
     }
 
     register:IRegister = (server, options, next) => {
         server.bind(this);
+
 
         server.dependency('ark-database', (server, continueRegister) => {
 
@@ -48,12 +51,52 @@ class Chat {
                 handler: (request, reply) => {
                     var userId = request.auth.credentials._id;
                     this.db.getConversationsByUserId(userId, (err, conversations) => {
-                        if(!err) {
+                        if (!err) {
                             return reply(conversations);
                         }
                         reply(err);
                     });
 
+                }
+            }
+        });
+
+        var newConversationSchema = this.joi.object().keys({
+            user_id: this.joi.string().required(),
+            message: this.joi.string().required()
+        });
+
+        server.route({
+            method: 'POST',
+            path: '/conversations',
+            config: {
+                handler: (request, reply) => {
+                    var userId = request.auth.credentials._id;
+                    var conversation = {
+                        user_1: userId,
+                        user_2: request.payload.user_id,
+                        user_1_read: true,
+                        user_2_read: false,
+                        messages: [{
+                            from: userId,
+                            timestamp: Date.now(),
+                            message: request.payload.message
+                        }],
+                        type: 'conversation'
+                    };
+
+                    this.db.createConversation(conversation, (err, data) => {
+                        if (!err) {
+                            return reply(data);
+                        }
+                        reply(err);
+                    });
+                },
+                description: 'Creates a new conversation with a user',
+                notes: 'with_user needs to be a valid from a user',
+                tags: ['api', 'chat', 'conversation'],
+                validate: {
+                    payload: newConversationSchema
                 }
             }
         });
