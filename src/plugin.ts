@@ -27,7 +27,6 @@ class Chat {
             next();
             this._register(server, options);
         });
-        next();
     };
 
     private _register(server, options) {
