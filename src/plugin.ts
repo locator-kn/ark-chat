@@ -5,8 +5,6 @@ export interface IRegister {
 
 export default
 class Chat {
-    socketio:any;
-    io:any;
     joi:any;
     db:any;
 
@@ -15,7 +13,6 @@ class Chat {
             pkg: require('./../../package.json')
         };
 
-        this.socketio = require('socket.io');
         this.joi = require('joi');
     }
 
@@ -26,7 +23,6 @@ class Chat {
         server.dependency('ark-database', (server, continueRegister) => {
 
             this.db = server.plugins['ark-database'];
-            this.io = this.socketio(server.listener);
             continueRegister();
             next();
             this._register(server, options);
@@ -35,14 +31,6 @@ class Chat {
     };
 
     private _register(server, options) {
-        this.io.on('connection', (socket) => {
-
-            socket.emit('Oh hii!');
-
-            socket.on('burp', () => {
-                socket.emit('Excuse you!');
-            });
-        });
 
         /**
          * get all conversations for currently logged in user
