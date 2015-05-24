@@ -7,6 +7,7 @@ export default
 class Chat {
     joi:any;
     db:any;
+    realtime:any;
 
     constructor() {
         this.register.attributes = {
@@ -20,12 +21,14 @@ class Chat {
         server.bind(this);
 
 
-        server.dependency('ark-database', (server, continueRegister) => {
+        server.dependency(['ark-database', 'ark-realtime'], (server, continueRegister) => {
 
             this.db = server.plugins['ark-database'];
+            this.realtime = server.plugins['ark-realtime'];
             continueRegister();
-            next();
+
             this._register(server, options);
+            next();
         });
     };
 
@@ -91,7 +94,32 @@ class Chat {
                         reply(err);
                     });
 
-                }
+                },
+                description: 'Get all messages of a conversation',
+                notes: 'getMessagesByConversionId',
+                tags: ['chat', 'messages']
+            }
+        });
+
+        server.route({
+            method: 'POST',
+            path: '/messages/{conversationId}',
+            config: {
+                handler: (request, reply) => {
+                    var receiver = request.payload.to;
+                    var message = request.payload.message;
+                    this.realtime.emitMessage(receiver, message);
+                },
+                validate: {
+                    payload: this.joi.object().keys({
+                        from: this.joi.string().required(),
+                        to: this.joi.string().required(),
+                        message: this.joi.string().required()
+                    })
+                },
+                description: 'Create a new message in a conversation',
+                notes: 'This will also emit a websocket message to the user',
+                tags: ['chat', 'messages', 'websockets']
             }
         });
 
