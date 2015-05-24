@@ -44,6 +44,9 @@ class Chat {
             });
         });
 
+        /**
+         * get all conversations for currently logged in user
+         */
         server.route({
             method: 'GET',
             path: '/my/conversations',
@@ -53,6 +56,31 @@ class Chat {
                     this.db.getConversationsByUserId(userId, (err, conversations) => {
                         if (!err) {
                             return reply(conversations);
+                        }
+                        reply(err);
+                    });
+
+                }
+            }
+        });
+
+        server.route({
+            method: 'GET',
+            path: '/conversations/{conversationId}',
+            config: {
+                handler: (request, reply) => {
+                    var conversationId = request.params.conversationId;
+                    var userId = request.auth.credentials._id;
+
+                    this.db.getConversationById(conversationId, (err, conversation) => {
+
+                        if (!err) {
+                            // check if user is participating conversation
+                            if (conversation.user_1 === userId || conversation.user_2 === userId) {
+                                return reply(conversation);
+                            } else {
+                                return reply({message: 'you are not a fellow of this conversation'}).code(401);
+                            }
                         }
                         reply(err);
                     });
@@ -100,6 +128,8 @@ class Chat {
                 }
             }
         });
+
+
     }
 
     errorInit(error) {
