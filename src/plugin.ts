@@ -89,6 +89,25 @@ class Chat {
             }
         });
 
+        server.route({
+            method: 'GET',
+            path: '/messages/{conversationId}',
+            config: {
+                handler: (request, reply) => {
+                    var conversationId = request.params.conversationId;
+
+                    this.db.getMessagesByConversionId(conversationId, (err, messages) => {
+
+                        if (!err) {
+                            return reply(messages);
+                        }
+                        reply(err);
+                    });
+
+                }
+            }
+        });
+
         var newConversationSchema = this.joi.object().keys({
             user_id: this.joi.string().required(),
             message: this.joi.string().required()
