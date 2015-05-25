@@ -109,6 +109,7 @@ class Chat {
                     var receiver = request.payload.to;
                     var message = request.payload.message;
                     this.realtime.emitMessage(receiver, message);
+                    reply({message: 'message sent'});
                 },
                 validate: {
                     payload: this.joi.object().keys({
