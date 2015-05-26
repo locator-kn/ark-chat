@@ -6,6 +6,7 @@ export interface IRegister {
 export default
 class Chat {
     joi:any;
+    boom:any;
     db:any;
     realtime:any;
 
@@ -15,6 +16,7 @@ class Chat {
         };
 
         this.joi = require('joi');
+        this.boom = require('boom');
     }
 
     register:IRegister = (server, options, next) => {
@@ -47,7 +49,7 @@ class Chat {
                         if (!err) {
                             return reply(conversations);
                         }
-                        reply(err);
+                        reply(this.boom.create(400, err));
                     });
 
                 }
@@ -72,7 +74,7 @@ class Chat {
                                 return reply({message: 'you are not a fellow of this conversation'}).code(401);
                             }
                         }
-                        reply(err);
+                        reply(this.boom.create(400, err));
                     });
 
                 }
@@ -91,7 +93,7 @@ class Chat {
                         if (!err) {
                             return reply(messages);
                         }
-                        reply(err);
+                        reply(this.boom.create(400, err));
                     });
 
                 },
@@ -108,8 +110,21 @@ class Chat {
                 handler: (request, reply) => {
                     var receiver = request.payload.to;
                     var message = request.payload.message;
-                    this.realtime.emitMessage(receiver, message);
-                    reply({message: 'message sent'});
+
+                    this.db.saveMessage({
+                        conversation_id: request.params.conversationId,
+                        from: request.payload.from,
+                        to: receiver,
+                        message: message
+                    }, (err, data) => {
+                        if (!err) {
+                            this.realtime.emitMessage(receiver, message);
+                            return reply({message: 'message sent'})
+                        }
+                        return reply(this.boom.create(400, err));
+                    });
+
+                    reply();
                 },
                 validate: {
                     payload: this.joi.object().keys({
@@ -152,7 +167,7 @@ class Chat {
                         if (!err) {
                             return reply(data);
                         }
-                        reply(err);
+                        reply(this.boom.create(400, err));
                     });
                 },
                 description: 'Creates a new conversation with a user',
