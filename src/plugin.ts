@@ -126,7 +126,6 @@ class Chat {
                         return reply(this.boom.create(400, err));
                     });
 
-                    reply();
                 },
                 validate: {
                     payload: this.joi.object().keys({
