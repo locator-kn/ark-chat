@@ -115,7 +115,9 @@ class Chat {
                         conversation_id: request.params.conversationId,
                         from: request.payload.from,
                         to: receiver,
-                        message: message
+                        message: message,
+                        timestamp: Date.now(),
+                        type: 'message'
                     }, (err, data) => {
                         if (!err) {
                             this.realtime.emitMessage(receiver, message);
