@@ -1,10 +1,9 @@
-# hapi-typescript-plugin
+# ark-chat
 
-This is a very basic template to write [HapiJs-Plugins](http://hapijs.com/api#plugins) with TypeScript.
+This repository contains some code for providing a chat-functionality for [ark](https://github.com/locator-kn/ark).
+It basically creates documents which represent a conversation.
+You can also retrieve all conversations, the requesting user is participating.
 
-It has a gulptask included to compile the source to JavaScript. This task is also referenced in the package.json as postinstall script.
+You can send messages to a particular conversation.
 
-## Tests
-
-Tests can be run with `npm test` or `make test`, `make test-cov` and `test-cov-html`.
-Note:  `npm test` points to `make test-cov`. This is inspired from many hapi plugins.
+This plugin connects to the [ark-realtime-plugin](https://github.com/locator-kn/ark-realtime) which takes care about websocket-connections.
