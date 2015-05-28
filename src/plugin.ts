@@ -120,18 +120,19 @@ class Chat {
             config: {
                 handler: (request, reply) => {
                     var receiver = request.payload.to;
-                    var message = request.payload.message;
 
-                    this.db.saveMessage({
+                    var messageObj = {
                         conversation_id: request.params.conversationId,
                         from: request.payload.from,
                         to: receiver,
-                        message: message,
+                        message: request.payload.message,
                         timestamp: Date.now(),
                         type: 'message'
-                    }, (err, data) => {
+                    };
+
+                    this.db.saveMessage(messageObj, (err, data) => {
                         if (!err) {
-                            this.realtime.emitMessage(receiver, message);
+                            this.realtime.emitMessage(receiver, messageObj);
                             return reply({message: 'message sent'})
                         }
                         return reply(this.boom.create(400, err));
