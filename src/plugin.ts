@@ -47,6 +47,17 @@ class Chat {
                     var userId = request.auth.credentials._id;
                     this.db.getConversationsByUserId(userId, (err, conversations) => {
                         if (!err) {
+                            if (conversations.length) {
+                                conversations.forEach((con) => {
+                                    if (con.user_1 === userId) {
+                                        con.opponent = con.user_2;
+                                    } else {
+                                        con.opponent = con.user_1;
+                                    }
+                                    delete con.user_1;
+                                    delete con.user_2;
+                                });
+                            }
                             return reply(conversations);
                         }
                         reply(this.boom.create(400, err));
