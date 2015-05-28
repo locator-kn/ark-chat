@@ -1,6 +1,6 @@
 {
   "name": "ark-chat",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Chat plugin for ark",
   "main": "index.js",
   "scripts": {
