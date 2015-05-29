@@ -8,6 +8,7 @@ class Chat {
     joi:any;
     boom:any;
     db:any;
+    hoek:any;
     realtime:any;
 
     constructor() {
@@ -17,6 +18,7 @@ class Chat {
 
         this.joi = require('joi');
         this.boom = require('boom');
+        this.hoek = require('hoek');
     }
 
     register:IRegister = (server, options, next) => {
@@ -132,7 +134,7 @@ class Chat {
 
                     this.db.saveMessage(messageObj, (err, data) => {
                         if (!err) {
-                            this.realtime.emitMessage(receiver, messageObj);
+                            this.realtime.emitMessage(receiver, this.hoek.merge(messageObj, {opponent: messageObj.from}));
                             return reply({message: 'message sent'})
                         }
                         return reply(this.boom.create(400, err));
