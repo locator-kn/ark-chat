@@ -165,25 +165,37 @@ class Chat {
             config: {
                 handler: (request, reply) => {
                     var userId = request.auth.credentials._id;
-                    var conversation = {
-                        user_1: userId,
-                        user_2: request.payload.user_id,
-                        user_1_read: true,
-                        user_2_read: false,
-                        messages: [{
-                            from: userId,
-                            timestamp: Date.now(),
-                            message: request.payload.message
-                        }],
-                        type: 'conversation'
-                    };
 
-                    this.db.createConversation(conversation, (err, data) => {
+                    this.db.getExistingConversationByTwoUsers(userId, request.payload.user_id, (err, conversations) => {
                         if (!err) {
-                            return reply(data);
+                            // if not empty, a conversation already exists
+                            if (conversations.length) {
+                                return reply(this.boom.conflict('Conversation already exists'), conversations[0]);
+                            }
+                            var conversation = {
+                                user_1: userId,
+                                user_2: request.payload.user_id,
+                                user_1_read: true,
+                                user_2_read: false,
+                                messages: [{
+                                    from: userId,
+                                    timestamp: Date.now(),
+                                    message: request.payload.message
+                                }],
+                                type: 'conversation'
+                            };
+
+                            this.db.createConversation(conversation, (err, data) => {
+                                if (!err) {
+                                    return reply(data);
+                                }
+                                reply(this.boom.create(400, err));
+                            });
                         }
                         reply(this.boom.create(400, err));
                     });
+
+
                 },
                 description: 'Creates a new conversation with a user',
                 notes: 'with_user needs to be a valid from a user',
