@@ -170,7 +170,7 @@ class Chat {
                         if (!err) {
                             // if not empty, a conversation already exists
                             if (conversations.length) {
-                                return reply(this.boom.conflict('Conversation already exists'), conversations[0]);
+                                return reply(this.boom.conflict('Conversation already exists', conversations[0]));
                             }
                             var conversation = {
                                 user_1: userId,
