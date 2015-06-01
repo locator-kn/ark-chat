@@ -189,10 +189,9 @@ class Chat {
                                 if (!err) {
                                     return reply(data);
                                 }
-                                reply(this.boom.create(400, err));
+                                return reply(this.boom.create(400, err));
                             });
                         }
-                        reply(this.boom.create(400, err));
                     });
 
 
