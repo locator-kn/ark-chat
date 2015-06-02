@@ -104,7 +104,7 @@ class Chat {
                     this.db.getMessagesByConversionId(conversationId, (err, messages) => {
 
                         if (!err) {
-                            if(!messages.lenth) {
+                            if(!messages.length) {
                                 return reply(this.boom.notFound());
                             }
                             return reply(messages);
