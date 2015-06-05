@@ -135,13 +135,12 @@ class Chat {
                         type: 'message'
                     };
 
-                    this.db.saveMessage(messageObj, (err, data) => {
-                        if (!err) {
-                            this.realtime.emitMessage(receiver, this.hoek.merge(messageObj, {opponent: messageObj.from}));
-                            return reply({message: 'message sent'})
+                    this.saveMessage(messageObj, receiver, (err, data) => {
+                        if(!err) {
+                            return reply({message: 'message sent'});
                         }
                         return reply(this.boom.create(400, err));
-                    });
+                    })
 
                 },
                 validate: {
@@ -156,6 +155,8 @@ class Chat {
                 tags: ['chat', 'messages', 'websockets']
             }
         });
+
+
 
         var newConversationSchema = this.joi.object().keys({
             user_id: this.joi.string().required(),
@@ -180,19 +181,31 @@ class Chat {
                                 user_2: request.payload.user_id,
                                 user_1_read: true,
                                 user_2_read: false,
-                                messages: [{
-                                    from: userId,
-                                    timestamp: Date.now(),
-                                    message: request.payload.message
-                                }],
                                 type: 'conversation'
                             };
 
                             this.db.createConversation(conversation, (err, data) => {
                                 if (!err) {
-                                    return reply(data);
+                                    var receiver = request.payload.to;
+
+                                    var messageObj = {
+                                        conversation_id: data._id || data.id,
+                                        from: conversation.user_1,
+                                        to: conversation.user_1,
+                                        message: request.payload.message,
+                                        timestamp: Date.now(),
+                                        type: 'message'
+                                    };
+                                    this.saveMessage(messageObj, receiver, (err, data) => {
+                                        if(!err) {
+                                            return reply(data);
+                                        }
+                                        return reply(this.boom.badRequest(err));
+                                    });
+
+                                } else {
+                                    return reply(this.boom.create(400, err));
                                 }
-                                return reply(this.boom.create(400, err));
                             });
                         }
                     });
@@ -209,6 +222,16 @@ class Chat {
         });
 
 
+    }
+
+    saveMessage(messageObj, receiver, callback) {
+        this.db.saveMessage(messageObj, (err, data) => {
+            if (!err) {
+                this.realtime.emitMessage(receiver, this.hoek.merge(messageObj, {opponent: messageObj.from}));
+            }
+            return callback(err, data);
+
+        });
     }
 
     errorInit(error) {
