@@ -1,0 +1,1 @@
+'use strict';function testScheme(server, opts) {    return {        authenticate: function (request, reply) {            reply.continue({name: 'locator', passwd: 'superpower', _id: '23bkj128f1782z'});        }    };}module.exports.testScheme = testScheme;
