@@ -228,8 +228,9 @@ class Chat {
         this.db.saveMessage(messageObj, (err, data) => {
             if (!err) {
                 this.realtime.emitMessage(receiver, this.hoek.merge(messageObj, {opponent: messageObj.from}));
+                return callback(null, data);
             }
-            return callback(err, data);
+            return callback(err);
 
         });
     }
