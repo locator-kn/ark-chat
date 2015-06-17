@@ -198,6 +198,8 @@ class Chat {
                                     };
                                     this.saveMessage(messageObj, receiver, (err, data) => {
                                         if(!err) {
+                                            // return conversations_id instead of messageID: https://github.com/locator-kn/ark/issues/24
+                                            data.id = messageObj.conversation_id;
                                             return reply(data);
                                         }
                                         return reply(this.boom.badRequest(err));
