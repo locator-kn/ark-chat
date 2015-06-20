@@ -176,13 +176,14 @@ class Chat {
                             if (conversations.length) {
                                 return reply(this.boom.conflict('Conversation already exists', conversations[0]));
                             }
+                            var opp = request.payload.user_id;
                             var conversation = {
                                 user_1: userId,
-                                user_2: request.payload.user_id,
-                                user_1_read: true,
-                                user_2_read: false,
+                                user_2: opp,
                                 type: 'conversation'
                             };
+                            conversation[userId + '_read'] = true;
+                            conversation[opp + '_read'] = false;
 
                             this.db.createConversation(conversation, (err, data) => {
                                 if (!err) {
