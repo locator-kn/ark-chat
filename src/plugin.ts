@@ -50,7 +50,7 @@ class Chat {
                     this.db.getConversationsByUserId(userId, (err, conversations) => {
                         if (!err) {
                             if (conversations.length) {
-                                conversations.forEach((con) => {
+                                conversations.forEach((con:any) => {
                                     if (con.user_1 === userId) {
                                         con.opponent = con.user_2;
                                     } else {
@@ -74,22 +74,45 @@ class Chat {
             path: '/conversations/{conversationId}',
             config: {
                 handler: (request, reply) => {
+
+
                     var conversationId = request.params.conversationId;
                     var userId = request.auth.credentials._id;
 
-                    this.db.getConversationById(conversationId, (err, conversation) => {
+                    // use pagination
+                    if (request.query.page) {
+                        this.db.getPagedMessagesByConversationId(conversationId, request.query)
+                            .then(conversation => {
+                                if (conversation.user_1 === userId || conversation.user_2 === userId) {
+                                    return reply(conversation);
+                                } else {
+                                    return reply({message: 'you are not a fellow of this conversation'}).code(401);
+                                }
+                            }).catch(reply)
+                    } else {
 
-                        if (!err) {
-                            // check if user is participating conversation
-                            if (conversation.user_1 === userId || conversation.user_2 === userId) {
-                                return reply(conversation);
-                            } else {
-                                return reply({message: 'you are not a fellow of this conversation'}).code(401);
+                        this.db.getConversationById(conversationId, (err, conversation) => {
+
+                            if (!err) {
+                                // check if user is participating conversation
+                                if (conversation.user_1 === userId || conversation.user_2 === userId) {
+                                    return reply(conversation);
+                                } else {
+                                    return reply({message: 'you are not a fellow of this conversation'}).code(401);
+                                }
                             }
-                        }
-                        reply(this.boom.create(400, err));
-                    });
-
+                            reply(this.boom.create(400, err));
+                        });
+                    }
+                },
+                validate: {
+                    params: {
+                        conversationId: this.joi.string().required()
+                    },
+                    query: this.joi.object().keys({
+                        page: this.joi.number().integer(),
+                        elements: this.joi.number().integer().positive()
+                    }).and('page', 'elements')
                 }
             }
         });
@@ -104,7 +127,7 @@ class Chat {
                     this.db.getMessagesByConversionId(conversationId, (err, messages) => {
 
                         if (!err) {
-                            if(!messages.length) {
+                            if (!messages.length) {
                                 return reply(this.boom.notFound());
                             }
                             return reply(messages);
@@ -115,7 +138,8 @@ class Chat {
                 },
                 description: 'Get all messages of a conversation',
                 notes: 'getMessagesByConversionId',
-                tags: ['chat', 'messages']
+                tags: ['chat', 'messages'],
+
             }
         });
 
@@ -136,7 +160,7 @@ class Chat {
                     };
 
                     this.saveMessage(messageObj, receiver, (err, data) => {
-                        if(!err) {
+                        if (!err) {
                             return reply({message: 'message sent'});
                         }
                         return reply(this.boom.create(400, err));
@@ -155,7 +179,6 @@ class Chat {
                 tags: ['chat', 'messages', 'websockets']
             }
         });
-
 
 
         var newConversationSchema = this.joi.object().keys({
@@ -198,7 +221,7 @@ class Chat {
                                         type: 'message'
                                     };
                                     this.saveMessage(messageObj, receiver, (err, data) => {
-                                        if(!err) {
+                                        if (!err) {
                                             // return conversations_id instead of messageID: https://github.com/locator-kn/ark/issues/24
                                             data.id = messageObj.conversation_id;
                                             return reply(data);
