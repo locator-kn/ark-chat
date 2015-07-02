@@ -161,11 +161,12 @@ class Chat {
                         type: 'message'
                     };
 
-                    this.saveMessage(messageObj, receiver).then(() => {
-                        return reply({message: 'message sent'});
-                    }).catch(err => {
-                        return reply(this.boom.badRequest(err));
-                    });
+                    this.saveMessage(messageObj, receiver)
+                        .then(() => {
+                            return reply({message: 'message sent'});
+                        }).catch(err => {
+                            return reply(this.boom.badRequest(err));
+                        });
 
                 },
                 description: 'Create a new message in a conversation',
