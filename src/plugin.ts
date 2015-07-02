@@ -85,20 +85,19 @@ class Chat {
                                     return reply({message: 'you are not a fellow of this conversation'}).code(401);
                                 }
                             }).catch(reply)
+
                     } else {
 
-                        this.db.getConversationById(conversationId, (err, conversation) => {
-
-                            if (!err) {
+                        this.db.getConversationById(conversationId)
+                            .then(conversation => {
                                 // check if user is participating conversation
                                 if (conversation.user_1 === userId || conversation.user_2 === userId) {
                                     return reply(conversation);
                                 } else {
                                     return reply({message: 'you are not a fellow of this conversation'}).code(401);
                                 }
-                            }
-                            reply(this.boom.create(400, err));
-                        });
+
+                            }).catch(reply)
                     }
                 },
                 validate: {
@@ -206,7 +205,7 @@ class Chat {
                             };
 
                             // add trip to conversation
-                            if(tripId) {
+                            if (tripId) {
                                 conversation.trip = request.payload.trip;
                             }
 
