@@ -187,8 +187,7 @@ class Chat {
         var newConversationSchema = this.joi.object().keys({
             user_id: this.joi.string().required(),
             message: this.joi.string().required(),
-            trip: this.joi.string(),
-            to: this.joi.string().required()
+            trip: this.joi.string()
         }).required();
 
         server.route({
@@ -196,30 +195,19 @@ class Chat {
             path: '/conversations',
             config: {
                 handler: (request, reply) => {
-                    var userId = request.auth.credentials._id;
+                    var me = request.auth.credentials._id;
+                    var opp = request.payload.user_id;
                     var tripId = request.payload.trip;
                     var conversation:any = {};
                     var conversationID:string;
 
-                    this.db.conversationDoesNotExist(userId, request.payload.user_id)
-                        .catch(conversation => {
-
-                            // conversation exists
-
-                            // update conversation with new trip, if trip is emitted
-                            if (tripId) {
-                                return reply(this.db.updateConversation(conversation.id, {trip: tripId}));
-                            } else {
-                                return reply(this.boom.conflict('Conversation already exists', conversation));
-                            }
-
-                        }).then(() => {
+                    this.db.conversationDoesNotExist(me, opp)
+                        .then(() => {
 
                             // create new conversation
 
-                            var opp = request.payload.user_id;
                             conversation = {
-                                user_1: userId,
+                                user_1: me,
                                 user_2: opp,
                                 type: 'conversation'
                             };
@@ -229,27 +217,44 @@ class Chat {
                                 conversation.trip = tripId;
                             }
 
-                            conversation[userId + '_read'] = true;
+                            conversation[me + '_read'] = true;
                             conversation[opp + '_read'] = false;
 
                             return this.db.createConversation(conversation);
+
+                        }).catch(conversation => {
+
+                            // conversation exists
+
+                            if (conversation.isBoom) {
+                                return new Promise((resolve, reject) => {
+                                    return reject(conversation)
+                                })
+                            } else if (!tripId) {
+                                return new Promise((resolve, reject) => {
+                                    return reject(this.boom.conflict('Conversation already exists', conversation))
+                                })
+                            }
+
+                            // update conversation with new trip, if trip is emitted
+                            return this.db.updateConversation(conversation.id || conversation._id, {trip: tripId});
+
 
                         }).then((data:any) => {
 
                             // send/save the actual message
 
-                            var receiver = request.payload.to;
                             conversationID = data._id || data.id;
 
                             var messageObj = {
                                 conversation_id: conversationID,
-                                from: conversation.user_1,
-                                to: conversation.user_1,
+                                from: me,
+                                to: opp,
                                 message: request.payload.message,
                                 timestamp: Date.now(),
                                 type: 'message'
                             };
-                            return this.saveMessage(messageObj, receiver);
+                            return this.saveMessage(messageObj, opp);
 
                         }).then((data:any) => {
 
