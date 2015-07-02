@@ -167,20 +167,18 @@ class Chat {
                     })
 
                 },
-                validate: {
-                    payload: this.joi.object().keys({
-                        from: this.joi.string().required(),
-                        to: this.joi.string().required(),
-                        message: this.joi.string().required()
-                    })
-                },
                 description: 'Create a new message in a conversation',
                 notes: 'This will also emit a websocket message to the user',
                 tags: ['chat', 'messages', 'websockets'],
                 validate: {
                     params: {
                         conversationId: this.joi.string().required()
-                    }
+                    },
+                    payload: this.joi.object().keys({
+                        from: this.joi.string().required(),
+                        to: this.joi.string().required(),
+                        message: this.joi.string().required()
+                    })
                 }
             }
         });
