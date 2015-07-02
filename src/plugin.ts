@@ -134,6 +134,11 @@ class Chat {
                 description: 'Get all messages of a conversation',
                 notes: 'getMessagesByConversionId',
                 tags: ['chat', 'messages'],
+                validate: {
+                    params: {
+                        conversationId: this.joi.string().required()
+                    }
+                }
 
             }
         });
