@@ -183,8 +183,9 @@ class Chat {
 
         var newConversationSchema = this.joi.object().keys({
             user_id: this.joi.string().required(),
-            message: this.joi.string().required()
-        });
+            message: this.joi.string().required(),
+            trip: this.joi.string()
+        }).required();
 
         server.route({
             method: 'POST',
@@ -192,19 +193,27 @@ class Chat {
             config: {
                 handler: (request, reply) => {
                     var userId = request.auth.credentials._id;
+                    var tripId = request.payload.trip;
 
                     this.db.getExistingConversationByTwoUsers(userId, request.payload.user_id, (err, conversations) => {
                         if (!err) {
                             // if not empty, a conversation already exists
                             if (conversations.length) {
+
                                 return reply(this.boom.conflict('Conversation already exists', conversations[0]));
                             }
                             var opp = request.payload.user_id;
-                            var conversation = {
+                            var conversation:any = {
                                 user_1: userId,
                                 user_2: opp,
                                 type: 'conversation'
                             };
+
+                            // add trip to conversation
+                            if(tripId) {
+                                conversation.trip = request.payload.trip;
+                            }
+
                             conversation[userId + '_read'] = true;
                             conversation[opp + '_read'] = false;
 
