@@ -1,3 +1,4 @@
+declare var Promise;
 export interface IRegister {
     (server:any, options:any, next:any): void;
     attributes?: any;
@@ -47,8 +48,8 @@ class Chat {
             config: {
                 handler: (request, reply) => {
                     var userId = request.auth.credentials._id;
-                    this.db.getConversationsByUserId(userId, (err, conversations) => {
-                        if (!err) {
+                    this.db.getConversationsByUserId(userId)
+                        .then(conversations => {
                             if (conversations.length) {
                                 conversations.forEach((con:any) => {
                                     if (con.user_1 === userId) {
@@ -61,10 +62,7 @@ class Chat {
                                 });
                             }
                             return reply(conversations);
-                        }
-                        reply(this.boom.create(400, err));
-                    });
-
+                        }).catch(reply);
                 }
             }
         });
@@ -89,20 +87,19 @@ class Chat {
                                     return reply({message: 'you are not a fellow of this conversation'}).code(401);
                                 }
                             }).catch(reply)
+
                     } else {
 
-                        this.db.getConversationById(conversationId, (err, conversation) => {
-
-                            if (!err) {
+                        this.db.getConversationById(conversationId)
+                            .then(conversation => {
                                 // check if user is participating conversation
                                 if (conversation.user_1 === userId || conversation.user_2 === userId) {
                                     return reply(conversation);
                                 } else {
                                     return reply({message: 'you are not a fellow of this conversation'}).code(401);
                                 }
-                            }
-                            reply(this.boom.create(400, err));
-                        });
+
+                            }).catch(reply)
                     }
                 },
                 validate: {
@@ -139,6 +136,11 @@ class Chat {
                 description: 'Get all messages of a conversation',
                 notes: 'getMessagesByConversionId',
                 tags: ['chat', 'messages'],
+                validate: {
+                    params: {
+                        conversationId: this.joi.string().required()
+                    }
+                }
 
             }
         });
@@ -159,84 +161,112 @@ class Chat {
                         type: 'message'
                     };
 
-                    this.saveMessage(messageObj, receiver, (err, data) => {
-                        if (!err) {
+                    this.saveMessage(messageObj, receiver)
+                        .then(() => {
                             return reply({message: 'message sent'});
-                        }
-                        return reply(this.boom.create(400, err));
-                    })
+                        }).catch(err => {
+                            return reply(this.boom.badRequest(err));
+                        });
 
                 },
+                description: 'Create a new message in a conversation',
+                notes: 'This will also emit a websocket message to the user',
+                tags: ['chat', 'messages', 'websockets'],
                 validate: {
+                    params: {
+                        conversationId: this.joi.string().required()
+                    },
                     payload: this.joi.object().keys({
                         from: this.joi.string().required(),
                         to: this.joi.string().required(),
                         message: this.joi.string().required()
-                    })
-                },
-                description: 'Create a new message in a conversation',
-                notes: 'This will also emit a websocket message to the user',
-                tags: ['chat', 'messages', 'websockets']
+                    }).required()
+                }
             }
         });
 
 
         var newConversationSchema = this.joi.object().keys({
             user_id: this.joi.string().required(),
-            message: this.joi.string().required()
-        });
+            message: this.joi.string().required(),
+            trip: this.joi.string()
+        }).required();
 
         server.route({
             method: 'POST',
             path: '/conversations',
             config: {
                 handler: (request, reply) => {
-                    var userId = request.auth.credentials._id;
+                    var me = request.auth.credentials._id;
+                    var opp = request.payload.user_id;
+                    var tripId = request.payload.trip;
+                    var conversation:any = {};
+                    var conversationID:string;
 
-                    this.db.getExistingConversationByTwoUsers(userId, request.payload.user_id, (err, conversations) => {
-                        if (!err) {
-                            // if not empty, a conversation already exists
-                            if (conversations.length) {
-                                return reply(this.boom.conflict('Conversation already exists', conversations[0]));
-                            }
-                            var opp = request.payload.user_id;
-                            var conversation = {
-                                user_1: userId,
+                    this.db.conversationDoesNotExist(me, opp)
+                        .then(() => {
+
+                            // create new conversation
+
+                            conversation = {
+                                user_1: me,
                                 user_2: opp,
                                 type: 'conversation'
                             };
-                            conversation[userId + '_read'] = true;
+
+                            // add trip to conversation, if omitted
+                            if (tripId) {
+                                conversation.trip = tripId;
+                            }
+
+                            conversation[me + '_read'] = true;
                             conversation[opp + '_read'] = false;
 
-                            this.db.createConversation(conversation, (err, data) => {
-                                if (!err) {
-                                    var receiver = request.payload.to;
+                            return this.db.createConversation(conversation);
 
-                                    var messageObj = {
-                                        conversation_id: data._id || data.id,
-                                        from: conversation.user_1,
-                                        to: conversation.user_1,
-                                        message: request.payload.message,
-                                        timestamp: Date.now(),
-                                        type: 'message'
-                                    };
-                                    this.saveMessage(messageObj, receiver, (err, data) => {
-                                        if (!err) {
-                                            // return conversations_id instead of messageID: https://github.com/locator-kn/ark/issues/24
-                                            data.id = messageObj.conversation_id;
-                                            return reply(data);
-                                        }
-                                        return reply(this.boom.badRequest(err));
-                                    });
+                        }).catch(conversation => {
 
-                                } else {
-                                    return reply(this.boom.create(400, err));
-                                }
-                            });
-                        }
-                    });
+                            // conversation exists
+
+                            if (conversation.isBoom) {
+                                return new Promise((resolve, reject) => {
+                                    return reject(conversation)
+                                })
+                            } else if (!tripId) {
+                                return new Promise((resolve, reject) => {
+                                    return reject(this.boom.conflict('Conversation already exists', conversation))
+                                })
+                            }
+
+                            // update conversation with new trip, if trip is emitted
+                            return this.db.updateConversation(conversation.id || conversation._id, {trip: tripId});
 
 
+                        }).then((data:any) => {
+
+                            // send/save the actual message
+
+                            conversationID = data._id || data.id;
+
+                            var messageObj = {
+                                conversation_id: conversationID,
+                                from: me,
+                                to: opp,
+                                message: request.payload.message,
+                                timestamp: Date.now(),
+                                type: 'message'
+                            };
+                            return this.saveMessage(messageObj, opp);
+
+                        }).then((data:any) => {
+
+                            // return conversations_id instead of messageID:
+                            // https://github.com/locator-kn/ark/issues/24
+                            data.id = conversationID;
+
+                            return reply(data);
+
+                        }).catch(reply);
                 },
                 description: 'Creates a new conversation with a user',
                 notes: 'with_user needs to be a valid from a user',
@@ -250,16 +280,21 @@ class Chat {
 
     }
 
-    saveMessage(messageObj, receiver, callback) {
-        this.db.saveMessage(messageObj, (err, data) => {
-            if (!err) {
-                this.realtime.emitMessage(receiver, this.hoek.merge(messageObj, {opponent: messageObj.from}));
-                return callback(null, data);
-            }
-            return callback(err);
+    saveMessage = (messageObj, receiver) => {
 
-        });
-    }
+        return new Promise((resolve, reject) => {
+
+            this.db.saveMessage(messageObj, (err, data) => {
+
+                if (err) {
+                    return reject(err);
+                }
+                this.realtime.emitMessage(receiver, this.hoek.merge(messageObj, {opponent: messageObj.from}));
+                return resolve(data);
+            });
+        })
+    };
+
 
     errorInit(error) {
         if (error) {
