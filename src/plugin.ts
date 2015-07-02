@@ -178,7 +178,7 @@ class Chat {
                         from: this.joi.string().required(),
                         to: this.joi.string().required(),
                         message: this.joi.string().required()
-                    })
+                    }).required()
                 }
             }
         });
