@@ -262,16 +262,21 @@ class Chat {
 
     }
 
-    saveMessage(messageObj, receiver, callback) {
-        this.db.saveMessage(messageObj, (err, data) => {
-            if (!err) {
-                this.realtime.emitMessage(receiver, this.hoek.merge(messageObj, {opponent: messageObj.from}));
-                return callback(null, data);
-            }
-            return callback(err);
+    saveMessage = (messageObj, receiver) => {
 
-        });
-    }
+        return new Promise((resolve, reject) => {
+
+            this.db.saveMessage(messageObj, (err, data) => {
+
+                if (err) {
+                    return reject(err);
+                }
+                this.realtime.emitMessage(receiver, this.hoek.merge(messageObj, {opponent: messageObj.from}));
+                return resolve(data);
+            });
+        })
+    };
+
 
     errorInit(error) {
         if (error) {
