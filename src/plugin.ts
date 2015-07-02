@@ -1,3 +1,4 @@
+declare var Promise;
 export interface IRegister {
     (server:any, options:any, next:any): void;
     attributes?: any;
@@ -187,7 +188,8 @@ class Chat {
         var newConversationSchema = this.joi.object().keys({
             user_id: this.joi.string().required(),
             message: this.joi.string().required(),
-            trip: this.joi.string()
+            trip: this.joi.string(),
+            to: this.joi.string().required()
         }).required();
 
         server.route({
@@ -197,58 +199,68 @@ class Chat {
                 handler: (request, reply) => {
                     var userId = request.auth.credentials._id;
                     var tripId = request.payload.trip;
+                    var conversation:any = {};
+                    var conversationID:string;
 
-                    this.db.getExistingConversationByTwoUsers(userId, request.payload.user_id, (err, conversations) => {
-                        if (!err) {
-                            // if not empty, a conversation already exists
-                            if (conversations.length) {
+                    this.db.conversationDoesNotExist(userId, request.payload.user_id)
+                        .catch(conversation => {
 
-                                return reply(this.boom.conflict('Conversation already exists', conversations[0]));
+                            // conversation exists
+
+                            // update conversation with new trip, if trip is emitted
+                            if (tripId) {
+                                return reply(this.db.updateConversation(conversation.id, {trip: tripId}));
+                            } else {
+                                return reply(this.boom.conflict('Conversation already exists', conversation));
                             }
+
+                        }).then(() => {
+
+                            // create new conversation
+
                             var opp = request.payload.user_id;
-                            var conversation:any = {
+                            conversation = {
                                 user_1: userId,
                                 user_2: opp,
                                 type: 'conversation'
                             };
 
-                            // add trip to conversation
+                            // add trip to conversation, if omitted
                             if (tripId) {
-                                conversation.trip = request.payload.trip;
+                                conversation.trip = tripId;
                             }
 
                             conversation[userId + '_read'] = true;
                             conversation[opp + '_read'] = false;
 
-                            this.db.createConversation(conversation, (err, data) => {
-                                if (!err) {
-                                    var receiver = request.payload.to;
+                            return this.db.createConversation(conversation);
 
-                                    var messageObj = {
-                                        conversation_id: data._id || data.id,
-                                        from: conversation.user_1,
-                                        to: conversation.user_1,
-                                        message: request.payload.message,
-                                        timestamp: Date.now(),
-                                        type: 'message'
-                                    };
-                                    this.saveMessage(messageObj, receiver, (err, data) => {
-                                        if (!err) {
-                                            // return conversations_id instead of messageID: https://github.com/locator-kn/ark/issues/24
-                                            data.id = messageObj.conversation_id;
-                                            return reply(data);
-                                        }
-                                        return reply(this.boom.badRequest(err));
-                                    });
+                        }).then((data:any) => {
 
-                                } else {
-                                    return reply(this.boom.create(400, err));
-                                }
-                            });
-                        }
-                    });
+                            // send/save the actual message
 
+                            var receiver = request.payload.to;
+                            conversationID = data._id || data.id;
 
+                            var messageObj = {
+                                conversation_id: conversationID,
+                                from: conversation.user_1,
+                                to: conversation.user_1,
+                                message: request.payload.message,
+                                timestamp: Date.now(),
+                                type: 'message'
+                            };
+                            return this.saveMessage(messageObj, receiver);
+
+                        }).then((data:any) => {
+
+                            // return conversations_id instead of messageID:
+                            // https://github.com/locator-kn/ark/issues/24
+                            data.id = conversationID;
+
+                            return reply(data);
+
+                        }).catch(reply);
                 },
                 description: 'Creates a new conversation with a user',
                 notes: 'with_user needs to be a valid from a user',
