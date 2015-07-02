@@ -176,7 +176,12 @@ class Chat {
                 },
                 description: 'Create a new message in a conversation',
                 notes: 'This will also emit a websocket message to the user',
-                tags: ['chat', 'messages', 'websockets']
+                tags: ['chat', 'messages', 'websockets'],
+                validate: {
+                    params: {
+                        conversationId: this.joi.string().required()
+                    }
+                }
             }
         });
 
