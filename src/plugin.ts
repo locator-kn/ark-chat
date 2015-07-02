@@ -48,20 +48,21 @@ class Chat {
             config: {
                 handler: (request, reply) => {
                     var userId = request.auth.credentials._id;
-                    this.db.getConversationsByUserId(userId).then(conversations => {
-                        if (conversations.length) {
-                            conversations.forEach((con:any) => {
-                                if (con.user_1 === userId) {
-                                    con.opponent = con.user_2;
-                                } else {
-                                    con.opponent = con.user_1;
-                                }
-                                delete con.user_1;
-                                delete con.user_2;
-                            });
-                        }
-                        return reply(conversations);
-                    }).catch(reply);
+                    this.db.getConversationsByUserId(userId)
+                        .then(conversations => {
+                            if (conversations.length) {
+                                conversations.forEach((con:any) => {
+                                    if (con.user_1 === userId) {
+                                        con.opponent = con.user_2;
+                                    } else {
+                                        con.opponent = con.user_1;
+                                    }
+                                    delete con.user_1;
+                                    delete con.user_2;
+                                });
+                            }
+                            return reply(conversations);
+                        }).catch(reply);
                 }
             }
         });
