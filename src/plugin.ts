@@ -72,8 +72,33 @@ class Chat {
             path: '/conversations/{conversationId}',
             config: {
                 handler: (request, reply) => {
+                    var conversationId = request.params.conversationId;
+                    var userId = request.auth.credentials._id;
 
+                    this.db.getConversationById(conversationId)
+                        .then(conversation => {
+                            // check if user is participating conversation
+                            if (conversation.user_1 === userId || conversation.user_2 === userId) {
+                                return reply(conversation);
+                            } else {
+                                return reply({message: 'you are not a fellow of this conversation'}).code(401);
+                            }
 
+                        }).catch(reply)
+                },
+                validate: {
+                    params: {
+                        conversationId: this.joi.string().required()
+                    }
+                }
+            }
+        });
+
+        server.route({
+            method: 'GET',
+            path: '/messages/{conversationId}',
+            config: {
+                handler: (request, reply) => {
                     var conversationId = request.params.conversationId;
                     var userId = request.auth.credentials._id;
 
@@ -89,50 +114,20 @@ class Chat {
                             }).catch(reply)
 
                     } else {
+                        this.db.getMessagesByConversionId(conversationId, (err, messages) => {
 
-                        this.db.getConversationById(conversationId)
-                            .then(conversation => {
-                                // check if user is participating conversation
-                                if (conversation.user_1 === userId || conversation.user_2 === userId) {
-                                    return reply(conversation);
-                                } else {
-                                    return reply({message: 'you are not a fellow of this conversation'}).code(401);
+                            if (!err) {
+                                if (!messages.length) {
+                                    return reply(this.boom.notFound());
                                 }
-
-                            }).catch(reply)
-                    }
-                },
-                validate: {
-                    params: {
-                        conversationId: this.joi.string().required()
-                    },
-                    query: this.joi.object().keys({
-                        page: this.joi.number().integer(),
-                        elements: this.joi.number().integer().positive()
-                    }).and('page', 'elements')
-                }
-            }
-        });
-
-        server.route({
-            method: 'GET',
-            path: '/messages/{conversationId}',
-            config: {
-                handler: (request, reply) => {
-                    var conversationId = request.params.conversationId;
-
-                    this.db.getMessagesByConversionId(conversationId, (err, messages) => {
-
-                        if (!err) {
-                            if (!messages.length) {
-                                return reply(this.boom.notFound());
+                                return reply(messages);
                             }
-                            return reply(messages);
-                        }
-                        reply(this.boom.create(400, err));
-                    });
+                            reply(this.boom.create(400, err));
+                        });
 
-                },
+                    }
+                }
+                ,
                 description: 'Get all messages of a conversation',
                 notes: 'getMessagesByConversionId',
                 tags: ['chat', 'messages'],
@@ -140,6 +135,11 @@ class Chat {
                     params: {
                         conversationId: this.joi.string().required()
                     }
+                    ,
+                    query: this.joi.object().keys({
+                        page: this.joi.number().integer(),
+                        elements: this.joi.number().integer().positive()
+                    }).and('page', 'elements')
                 }
 
             }
