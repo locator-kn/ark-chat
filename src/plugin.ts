@@ -102,32 +102,11 @@ class Chat {
                     var conversationId = request.params.conversationId;
                     var userId = request.auth.credentials._id;
 
-                    // use pagination
-                    if (request.query.page) {
-                        this.db.getPagedMessagesByConversationId(conversationId, request.query)
-                            .then(conversation => {
-                                if (conversation.user_1 === userId || conversation.user_2 === userId) {
-                                    return reply(conversation);
-                                } else {
-                                    return reply({message: 'you are not a fellow of this conversation'}).code(401);
-                                }
-                            }).catch(reply)
-
-                    } else {
-                        this.db.getMessagesByConversionId(conversationId, (err, messages) => {
-
-                            if (!err) {
-                                if (!messages.length) {
-                                    return reply(this.boom.notFound());
-                                }
-                                return reply(messages);
-                            }
-                            reply(this.boom.create(400, err));
-                        });
-
-                    }
-                }
-                ,
+                    this.db.iAmPartOfThisConversation(userId, conversationId)
+                        .then(value => {
+                            return reply(this.db.getMessagesByConversionId(conversationId, request.query));
+                        }).catch(reply);
+                },
                 description: 'Get all messages of a conversation',
                 notes: 'getMessagesByConversionId',
                 tags: ['chat', 'messages'],
@@ -203,6 +182,10 @@ class Chat {
                     var conversation:any = {};
                     var conversationID:string;
 
+                    if (me === opp) {
+                        return reply(this.boom.badData('Wrong userid emmited'))
+                    }
+
                     this.db.conversationDoesNotExist(me, opp)
                         .then(() => {
 
@@ -229,18 +212,13 @@ class Chat {
                             // conversation exists
 
                             if (conversation.isBoom) {
-                                return new Promise((resolve, reject) => {
-                                    return reject(conversation)
-                                })
+                                    return Promise.reject(conversation)
                             } else if (!tripId) {
-                                return new Promise((resolve, reject) => {
-                                    return reject(this.boom.conflict('Conversation already exists', conversation))
-                                })
+                                    return Promise.reject(this.boom.conflict('Conversation already exists', conversation))
                             }
 
                             // update conversation with new trip, if trip is emitted
                             return this.db.updateConversation(conversation.id || conversation._id, {trip: tripId});
-
 
                         }).then((data:any) => {
 
