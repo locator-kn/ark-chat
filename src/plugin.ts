@@ -273,6 +273,32 @@ class Chat {
         })
     };
 
+    sendMails = (sendUserID, receiveUserID, tripID, conversationID) => {
+
+        var sendUser:any = {};
+        var receiveUser:any = {};
+
+        var userProm = this.db.getDocument(sendUserID);
+        var opponentProm = this.db.getDocument(receiveUserID);
+        var tripProm = this.db.getDocument(tripID);
+
+        Promise.all([userProm, opponentProm, tripProm])
+            .then((value:any)=> {
+                sendUser.name = value[0].name;
+                sendUser.picture = value[0].picture;
+
+                receiveUser.name = value[1].name;
+
+                var tripTitle = value[2].title;
+
+                this.mailer.sendTripInterestMail(sendUser, receiveUser, tripTitle, conversationID);
+
+            })
+            .catch(err => console.error(err));
+
+
+    };
+
 
     errorInit(error) {
         if (error) {
