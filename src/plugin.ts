@@ -11,6 +11,7 @@ class Chat {
     db:any;
     hoek:any;
     realtime:any;
+    mailer:any;
 
     constructor() {
         this.register.attributes = {
@@ -26,10 +27,11 @@ class Chat {
         server.bind(this);
 
 
-        server.dependency(['ark-database', 'ark-realtime'], (server, continueRegister) => {
+        server.dependency(['ark-database', 'ark-realtime', 'ark-mailer'], (server, continueRegister) => {
 
             this.db = server.plugins['ark-database'];
             this.realtime = server.plugins['ark-realtime'];
+            this.mailer = server.plugins['ark-mailer'];
             continueRegister();
 
             this._register(server, options);
