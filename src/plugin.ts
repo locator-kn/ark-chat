@@ -214,9 +214,9 @@ class Chat {
                             // conversation exists
 
                             if (conversation.isBoom) {
-                                    return Promise.reject(conversation)
+                                return Promise.reject(conversation)
                             } else if (!tripId) {
-                                    return Promise.reject(this.boom.conflict('Conversation already exists', conversation))
+                                return Promise.reject(this.boom.conflict('Conversation already exists', conversation))
                             }
 
                             // update conversation with new trip, if trip is emitted
@@ -227,6 +227,11 @@ class Chat {
                             // send/save the actual message
 
                             conversationID = data._id || data.id;
+
+                            if (data.duplicateTrip) {
+                                // don't send message
+                                return Promise.resolve(data);
+                            }
 
                             var messageObj = {
                                 conversation_id: conversationID,
@@ -244,7 +249,14 @@ class Chat {
                             // https://github.com/locator-kn/ark/issues/24
                             data.id = conversationID;
 
-                            return reply(data);
+                            reply(data);
+
+                            if (data.duplicateTrip || !tripId) {
+                                // dont send mail
+                                return;
+                            }
+                            // send me an email and the opponent if a trip was selected
+                            this.sendMails(me, opp, tripId, conversationID);
 
                         }).catch(reply);
                 },
@@ -290,6 +302,7 @@ class Chat {
                 sendUser.picture = value[0].picture;
 
                 receiveUser.name = value[1].name;
+                receiveUser.mail = value[1].mail;
 
                 var tripTitle = value[2].title;
 
