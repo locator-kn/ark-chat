@@ -300,13 +300,17 @@ class Chat {
             .then((value:any)=> {
                 sendUser.name = value[0].name;
                 sendUser.picture = value[0].picture;
+                sendUser.mail = value[0].mail;
+
 
                 receiveUser.name = value[1].name;
                 receiveUser.mail = value[1].mail;
+                receiveUser.picture = value[1].picture;
 
                 var tripTitle = value[2].title;
 
                 this.mailer.sendTripInterestMail(sendUser, receiveUser, tripTitle, conversationID);
+                this.mailer.sendTripInterestMailToMe(receiveUser, sendUser, tripTitle, conversationID)
 
             })
             .catch(err => console.error(err));
