@@ -233,7 +233,8 @@ class Chat {
                                 return Promise.resolve({
                                     ok: true,
                                     id: conversationID,
-                                    rev: data._rev || data.rev
+                                    rev: data._rev || data.rev,
+                                    duplicateTrip: true
                                 });
                             }
 
