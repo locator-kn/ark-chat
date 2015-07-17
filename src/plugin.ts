@@ -224,14 +224,20 @@ class Chat {
 
                         }).then((data:any) => {
 
-                            // send/save the actual message
 
                             conversationID = data._id || data.id;
 
                             if (data.duplicateTrip) {
                                 // don't send message
-                                return Promise.resolve(data);
+                                // HACK: current workaround, send boom confilct in the future
+                                return Promise.resolve({
+                                    ok: true,
+                                    id: conversationID,
+                                    rev: data._rev || data.rev
+                                });
                             }
+
+                            // send/save the actual message
 
                             var messageObj = {
                                 conversation_id: conversationID,
