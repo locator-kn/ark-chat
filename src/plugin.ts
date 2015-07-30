@@ -280,18 +280,11 @@ class Chat {
     }
 
     saveMessage = (messageObj, receiver) => {
-
-        return new Promise((resolve, reject) => {
-
-            this.db.saveMessage(messageObj, (err, data) => {
-
-                if (err) {
-                    return reject(err);
-                }
+        return this.db.saveMessage(messageObj)
+            .then(data => {
                 this.realtime.emitMessage(receiver, this.hoek.merge(messageObj, {opponent: messageObj.from}));
-                return resolve(data);
-            });
-        })
+                return Promise.resolve(data);
+            })
     };
 
     sendMails = (sendUserID, receiveUserID, tripID, conversationID) => {
