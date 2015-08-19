@@ -35,8 +35,9 @@ class Chat {
             continueRegister();
 
             this._register(server, options);
-            next();
         });
+        
+        next();
     };
 
     private _register(server, options) {
